@@ -1,0 +1,3 @@
+Name,Seniority,Chief,Carried Hours,Requested Day:Time:Duration,Mandatory Day:Time:Duration,Half Block,Pre Block Hours
+Fred Milgrim,4,Yes,0,2:7:72 5:16:12,None,Both,0
+Zach Gittelman,0,No,5,13:15:48,None,1,0
