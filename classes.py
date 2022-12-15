@@ -1,5 +1,5 @@
 from settings.block import START_DAY, END_DAY
-from settings.config import Seniority, ExpectedHours, Locations
+from settings.config import Seniority, ExpectedHours, Locations, ExpectedNights, ExpectedWeekends
 
 
 class Block:
@@ -65,19 +65,20 @@ class Doctor:
 
         assert carry_hours >= pre_block_hours, f"{name} worked {pre_block_hours} this week before the block started, so there minimum carried hours should be at least this large, found {carry_hours}"
 
-
         self.name = name
         self.seniority = Seniority(seniority)
         self.chief = True if chief == "yes" else False
         self.carry_hours = carry_hours
         self.half_block = half_block
-        self.weekly_hours_worked = pre_block_hours
+        self.weekly_hours = pre_block_hours
         self.requested_timeoff = requested_timeoff
         self.mandatory_timeoff = mandatory_timeoff
         self.expected_hours = self.calculate_expected_hours()
         self.expected_nights = self.calculate_expected_night_shifts()
         self.expected_weekends = self.calculate_expected_weekend_shifts()
-        self.actual_hours = carry_hours + pre_block_hours # TODO: determine which to use if both are specified, they might have carry that shouldn't apply to the specific week
+        self.actual_hours = carry_hours  # TODO: confirm that only carry is used for total hours worked
+        self.actual_nights = 0 # TODO: determine if there are carry nights
+        self.actual_weekends = 0 # TODO: determine if there are carry weekends
 
         # Add Wednesday conference for EM residents
         if not Seniority(seniority) == Seniority.OFF_SERVICE:
@@ -105,21 +106,26 @@ class Doctor:
             end_day = 14
         return end_day
 
+    def get_working_days(self):
+        return self.get_end_day() - self.get_start_day() + 1
+
     def calculate_expected_hours(self):
         expected_hours = ExpectedHours[self.seniority]
         if self.chief:
             expected_hours = 124
 
-        working_days = self.get_end_day() - self.get_start_day() + 1
-        ratio = working_days / 28
-
-        return expected_hours * ratio
+        working_days = self.get_working_days()
+        return expected_hours * (working_days / 28)
 
     def calculate_expected_night_shifts(self):
-        pass
+        expected_nights = ExpectedNights[self.seniority]
+        working_days = self.get_working_days()
+        return expected_nights * (working_days / 28)
 
     def calculate_expected_weekend_shifts(self):
-        pass
+        expected_weekends = ExpectedWeekends[self.seniority]
+        working_days = self.get_working_days()
+        return expected_weekends * (working_days / 28)
 
     def working_on_day(self, day):
         return bool(self.get_start_day() <= day <= self.get_end_day())
@@ -136,7 +142,7 @@ class Doctor:
         This should return True if they worked 60 hours from the previous Sunday
         to next Sunday (carried hours should be added if its the first week)
         """
-        return bool(60 < self.weekly_hours_worked)
+        return bool(60 <= self.weekly_hours)
 
     def received_weekly_break(self):
         """
@@ -149,12 +155,16 @@ class Doctor:
         """
         Every
         """
-        self.weekly_hours_worked = 0
-        pass
+        self.weekly_hours = 0
 
     def add_shift(self, shift):
         # Add actual hours worked, nights, and weekend count by this shift
         # Then add mandatory time off after the shift
+        self.actual_hours += shift.duration
+        self.weekly_hours += shift.duration
+        if shift.night:
+            self.actual_nights += 1
+
         pass
 
 
@@ -249,7 +259,7 @@ class Shift:
         self.duration = duration
         self.position_preferences = position_preferences
         self.night = self.determine_if_night(start_time)
-        self.weekend = self.determine_if_weekend()
+        self.weekend = self.determine_if_weekend(start_day, start_time)
         self.doctor = None
 
     def assign_doctor(self, doctor):
@@ -260,9 +270,20 @@ class Shift:
         # Night shifts start at 7pm. Starting at 7am does not count.
         return bool(19 <= start_time or start_time < 7)
 
-    def determine_if_weekend(self):
-        # Overlaps on saturday or sunday
-        return True
+    def determine_if_weekend(self, start_day, start_time):
+        # Weekend shifts start between Sat 7am - Mon 7am (exclusive Mon 7am)
+
+        # Saturday
+        if start_day % 7 == 6 and start_time >= 7:
+            return True
+        # Sunday
+        if start_day % 7 == 0:
+            return True
+        # Monday
+        if start_day % 7 == 1 and start_time < 7:
+            return True
+
+        return False
 
 
 class Schedule:
