@@ -9,4 +9,8 @@ if __name__ == "__main__":
     shifts = parse_shifts('settings/shifts.csv')
     schedule = Schedule(block, doctors, shifts)
     schedule.create_extra_shifts(shifts, doctors)
+
+    print('PRINTING SCHEDULE AND STATS')
     print(schedule)
+    for doctor in doctors:
+        print(doctor)

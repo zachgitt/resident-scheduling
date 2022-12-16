@@ -151,6 +151,9 @@ class Doctor:
         timeoff = TimeOff(self.name, start_day, start_time, duration, mandatory=True)
         self.mandatory_timeoff.append(timeoff)
 
+    def remove_mandatory_time_off(self):
+        self.mandatory_timeoff.pop()
+
     def worked_weekly_max_hours(self):
         """
         This should return True if they worked 60 hours from the previous Sunday
@@ -296,11 +299,13 @@ class Shift:
     def assign_doctor(self, doctor):
         self.doctor = doctor
         doctor.add_shift(self)
+        doctor.add_mandatory_time_off(self.start_time, self.start_time, self.duration)
         print(f'Assigning Shift:{self} to Doctor:{doctor}')
 
     def unassign_doctor(self, doctor):
         self.doctor = None
         doctor.remove_shift(self)
+        doctor.remove_mandatory_time_off()
         print(f'Unassigning Shift:{self} to Doctor:{doctor}')
 
     def determine_if_night(self, start_time):
@@ -383,7 +388,6 @@ class Schedule:
             shift.unassign_doctor(doctor)
             self.undo_try_resetting_weekly_hours(doctors, shifts, i)
             return None
-
 
     def filter_available_doctors(self, doctors, shift):
         # TODO: Filter doctors
