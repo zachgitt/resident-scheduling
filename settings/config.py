@@ -24,35 +24,25 @@ ExpectedHours = {
     Seniority.FOURTH_YEAR: 136,
 }
 
+
 # Standard nights assumes a 28 day cycle.
 ExpectedNights = {
-    # TODO: determine if range is needed
-    # Seniority.OFF_SERVICE: (8, 10),
-    # Seniority.FIRST_YEAR: (8, 10),
-    # Seniority.SECOND_YEAR: (6, 8),
-    # Seniority.THIRD_YEAR: (5, 7),
-    # Seniority.FOURTH_YEAR: (4, 5),
-    Seniority.OFF_SERVICE: 9,
-    Seniority.FIRST_YEAR: 9,
-    Seniority.SECOND_YEAR: 7,
-    Seniority.THIRD_YEAR: 6,
-    Seniority.FOURTH_YEAR: 4.5,
+    Seniority.OFF_SERVICE: (8, 10),
+    Seniority.FIRST_YEAR: (8, 10),
+    Seniority.SECOND_YEAR: (6, 8),
+    Seniority.THIRD_YEAR: (5, 7),
+    Seniority.FOURTH_YEAR: (4, 5),
 }
+
 
 # Standard weekends assumes a 28 day cycle. Note bounds are inclusive
 # and might repeat.
 ExpectedWeekends = {
-    # TODO: determine if range is needed
-    # Seniority.OFF_SERVICE: (4, 5),
-    # Seniority.FIRST_YEAR: (4, 5),
-    # Seniority.SECOND_YEAR: (4, 4),
-    # Seniority.THIRD_YEAR: (4, 4),
-    # Seniority.FOURTH_YEAR: (3, 4),
-    Seniority.OFF_SERVICE: 4.5,
-    Seniority.FIRST_YEAR: 4.5,
-    Seniority.SECOND_YEAR: 4,
-    Seniority.THIRD_YEAR: 4,
-    Seniority.FOURTH_YEAR: 3.5,
+    Seniority.OFF_SERVICE: (4, 5),
+    Seniority.FIRST_YEAR: (4, 5),
+    Seniority.SECOND_YEAR: (4, 4),
+    Seniority.THIRD_YEAR: (4, 4),
+    Seniority.FOURTH_YEAR: (3, 4),
 }
 
 

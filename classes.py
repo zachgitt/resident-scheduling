@@ -1,3 +1,4 @@
+from functools import cmp_to_key
 from settings.block import START_DAY, END_DAY
 from settings.config import Seniority, ExpectedHours, Locations, ExpectedNights, ExpectedWeekends
 
@@ -74,11 +75,12 @@ class Doctor:
         self.requested_timeoff = requested_timeoff
         self.mandatory_timeoff = mandatory_timeoff
         self.expected_hours = self.calculate_expected_hours()
-        self.expected_nights = self.calculate_expected_night_shifts()
-        self.expected_weekends = self.calculate_expected_weekend_shifts()
+        self.expected_night_range = self.calculate_expected_night_shift_range()
+        self.expected_weekend_range = self.calculate_expected_weekend_shift_range()
         self.actual_hours = carry_hours  # TODO: confirm that only carry is used for total hours worked
         self.actual_nights = 0 # TODO: determine if there are carry nights
         self.actual_weekends = 0 # TODO: determine if there are carry weekends
+        self.actual_shifts = 0
 
         # Add Wednesday conference for EM residents
         if not Seniority(seniority) == Seniority.OFF_SERVICE:
@@ -117,15 +119,27 @@ class Doctor:
         working_days = self.get_working_days()
         return expected_hours * (working_days / 28)
 
-    def calculate_expected_night_shifts(self):
-        expected_nights = ExpectedNights[self.seniority]
-        working_days = self.get_working_days()
-        return expected_nights * (working_days / 28)
+    def calculate_expected_night_shift_range(self):
+        expected_nights_range = ExpectedNights[self.seniority]
+        lower = expected_nights_range[0]
+        upper = expected_nights_range[1]
 
-    def calculate_expected_weekend_shifts(self):
-        expected_weekends = ExpectedWeekends[self.seniority]
         working_days = self.get_working_days()
-        return expected_weekends * (working_days / 28)
+        ratio = working_days / 28
+        night_range = (lower * ratio, upper * ratio)
+
+        return night_range
+
+    def calculate_expected_weekend_shift_range(self):
+        expected_weekends_range = ExpectedWeekends[self.seniority]
+        lower = expected_weekends_range[0]
+        upper = expected_weekends_range[1]
+
+        working_days = self.get_working_days()
+        ratio = working_days / 28
+        weekend_range = (lower * ratio, upper * ratio)
+
+        return weekend_range
 
     def working_on_day(self, day):
         return bool(self.get_start_day() <= day <= self.get_end_day())
@@ -153,20 +167,35 @@ class Doctor:
 
     def reset_weekly_hours(self):
         """
-        Every
+        Reset when shift starts on Sunday 7am signifying the new week.
         """
+        # TODO: pretty sure you will need to record all the previous weeks
+        #   weekly hours in case you need to backtrack
         self.weekly_hours = 0
+
+    def undo_reset_weekly_hours(self):
+        # TODO: just remove this current weeks weekly hours
+        pass
 
     def add_shift(self, shift):
         # Add actual hours worked, nights, and weekend count by this shift
         # Then add mandatory time off after the shift
+        self.actual_shifts += 1
         self.actual_hours += shift.duration
         self.weekly_hours += shift.duration
         if shift.night:
             self.actual_nights += 1
+        if shift.weekend:
+            self.actual_weekends += 1
 
-        pass
-
+    def remove_shift(self, shift):
+        self.actual_shifts -= 1
+        self.actual_hours -= shift.duration
+        self.weekly_hours -= shift.duration
+        if shift.night:
+            self.actual_shifts -= 1
+        if shift.weekend:
+            self.actual_weekends -= 1
 
     def stats(self):
         """
@@ -262,9 +291,17 @@ class Shift:
         self.weekend = self.determine_if_weekend(start_day, start_time)
         self.doctor = None
 
+        print(f'Creating {self}')
+
     def assign_doctor(self, doctor):
         self.doctor = doctor
         doctor.add_shift(self)
+        print(f'Assigning Shift:{self} to Doctor:{doctor}')
+
+    def unassign_doctor(self, doctor):
+        self.doctor = None
+        doctor.remove_shift(self)
+        print(f'Unassigning Shift:{self} to Doctor:{doctor}')
 
     def determine_if_night(self, start_time):
         # Night shifts start at 7pm. Starting at 7am does not count.
@@ -285,13 +322,139 @@ class Shift:
 
         return False
 
+    def __repr__(self):
+        attrs = vars(self)
+        msg = "Shift "
+        msg += ', '.join(f"{key}:{value}" for key, value in attrs.items())
+        return msg
+
+
+def compare_shifts(shift1, shift2):
+    # Sort by day, if tied, sort by time
+    if shift1.start_day < shift2.start_day:
+        return -1
+    elif shift1.start_day > shift2.start_day:
+        return 1
+    elif shift1.start_time < shift2.start_time:
+        return -1
+    elif shift1.start_time > shift2.start_time:
+        return 1
+    else:
+        return 0
+
+
+def compare_doctors(doctor1, doctor2):
+    # TODO: somehow pass in shift into comparator
+    # Sort by hours needed, nights needed, weekends needed, shift preference
+    # Move to back of list if requested this time off
+    return 0
+
 
 class Schedule:
     def __init__(self, block, doctors, shifts):
         # Sort shifts based on start time
+        shifts.sort(key=cmp_to_key(compare_shifts))
+        curr_schedule = []
+        self.schedule = self.search(doctors, shifts, 0, curr_schedule)
+
+    def search(self, doctors, shifts, i, curr_schedule):
+        if len(shifts) == i:
+            print('Schedule Complete!!!')
+            return curr_schedule
+
+        shift = shifts[i]
+        self.try_resetting_weekly_hours(doctors, shifts, i)
+        available_doctors = self.filter_available_doctors(doctors, shift)
+        sorted_doctors = self.sort_doctors(available_doctors, shift)
+        doctor = self.choose_doctor(sorted_doctors)
+
+        if doctor is None:
+            self.undo_try_resetting_weekly_hours(doctors, shifts, i)
+            return None
+
+        # Continue iterating
+        shift.assign_doctor(doctor)
+        response = self.search(doctors, shifts, i+1, curr_schedule)
+        if response:
+            return response
+        else:
+            # Backtrack
+            print(f'Backtracking Shift i={i}/{len(shifts)}')
+            shift.unassign_doctor(doctor)
+            self.undo_try_resetting_weekly_hours(doctors, shifts, i)
+            return None
+
+
+    def filter_available_doctors(self, doctors, shift):
+        # TODO: Filter doctors
+        # Mandatory Time Off, Not Working, Do Not Have Seniority, Shift Would Exceed 60 Hours
+        available = []
+        return available
+
+    def sort_doctors(self, doctors, shift):
+        return sorted(doctors, key=cmp_to_key(compare_doctors))
+
+    def choose_doctor(self, doctors):
+        if len(doctors) == 0:
+            return None
+
+        # TODO: potentially randomize instead of selecting the first doctor
+        return doctors[0]
+
+    def create_extra_shifts(self, shifts, doctors):
+        """
+        Create extra shifts for doctors that do not have enough hours.
+        TODO: determine with fred if they are supposed to be added to specific
+                shifts and not just any
+        """
+        pass
+
+    def undo_try_resetting_weekly_hours(self, doctors, shifts, i):
+        # TODO: whatever the hours were before they were reset to zero
+        # needs to be returned, i think this might require saving the
+        # weekly hours in a stack
+        assert i > 0, f"Undoing weekly reset hours for shift 0, but should be impossible"
+
+        # Determine if you are crossing threshold back to last week
+        prev_shift = shifts[i-1]
+        shift = shifts[i]
+
+        # Undo reset doctor weekly hours worked if newest shift is Sun 7am
+        if shift.start_day % 7 == 0 and shift.start_time == 7:
+            # The previous shift exists and was earlier
+            if (prev_shift is not None) and \
+                    (prev_shift.start_day < shift.start_day and
+                     prev_shift.start_time < shift.start_time):
+                print(f'Undoing resetting weekly hours between prev_shift={prev_shift} and shift={shift}')
+                for doctor in doctors:
+                    doctor.undo_reset_weekly_hours()
+
+
+    def try_resetting_weekly_hours(self, doctors, shifts, i):
+        # TODO: you can't undo reset hours if you backtrack the previous week
+
+        # No need to reset if its the first # TODO: check this is accurate
+        if i < 1:
+            return
+
+        prev_shift = shifts[i-1]
+        shift = shifts[i]
 
         # Reset doctor weekly hours worked if newest shift is Sun 7am
+        if shift.start_day % 7 == 0 and shift.start_time == 7:
+            # The previous shift exists and was earlier
+            if (prev_shift is not None) and \
+               (prev_shift.start_day < shift.start_day and
+                prev_shift.start_time < shift.start_time):
+                print(f'Resetting weekly hours between prev_shift={prev_shift} and shift={shift}')
+                for doctor in doctors:
+                    doctor.reset_weekly_hours()
+
+    def export(self):
+        # TODO: export schedule to image or csv
         pass
 
-    def reset_weekly_hours(self, doctors):
-        pass
+    def __repr__(self):
+        print('FINAL SCHEDULE:')
+        for shift in self.schedule:
+            print(shift)
