@@ -71,7 +71,7 @@ class Doctor:
         self.chief = True if chief == "yes" else False
         self.carry_hours = carry_hours
         self.half_block = half_block
-        self.weekly_hours = pre_block_hours
+        self.weekly_hours = [pre_block_hours]
         self.requested_timeoff = requested_timeoff
         self.mandatory_timeoff = mandatory_timeoff
         self.expected_hours = self.calculate_expected_hours()
@@ -159,7 +159,7 @@ class Doctor:
         This should return True if they worked 60 hours from the previous Sunday
         to next Sunday (carried hours should be added if its the first week)
         """
-        return bool(60 <= self.weekly_hours)
+        return bool(60 <= self.weekly_hours[-1])
 
     def received_weekly_break(self):
         """
@@ -171,34 +171,40 @@ class Doctor:
     def reset_weekly_hours(self):
         """
         Reset when shift starts on Sunday 7am signifying the new week.
+        Track each weeks weekly hours to allow for backtracking.
         """
-        # TODO: pretty sure you will need to record all the previous weeks
-        #   weekly hours in case you need to backtrack
-        self.weekly_hours = 0
+        self.weekly_hours.append(0)
 
     def undo_reset_weekly_hours(self):
-        # TODO: just remove this current weeks weekly hours
-        pass
+        """
+        Remove this current weeks weekly hours when backtracking.
+        """
+        self.weekly_hours.pop()
 
     def add_shift(self, shift):
         # Add actual hours worked, nights, and weekend count by this shift
         # Then add mandatory time off after the shift
         self.actual_shifts += 1
         self.actual_hours += shift.duration
-        self.weekly_hours += shift.duration
+        self.weekly_hours[-1] += shift.duration
         if shift.night:
             self.actual_nights += 1
         if shift.weekend:
             self.actual_weekends += 1
 
+        start_day = shift.start_day + (shift.start_time + shift.duration) // 24
+        start_time = shift.start_time + (shift.start_time + shift.duration) % 24
+        self.add_mandatory_time_off(start_day, start_time, shift.duration)
+
     def remove_shift(self, shift):
         self.actual_shifts -= 1
         self.actual_hours -= shift.duration
-        self.weekly_hours -= shift.duration
+        self.weekly_hours[-1] -= shift.duration
         if shift.night:
             self.actual_shifts -= 1
         if shift.weekend:
             self.actual_weekends -= 1
+        self.mandatory_timeoff.pop() # TODO: check popping last does not have a corner case
 
     def stats(self):
         """
@@ -265,7 +271,6 @@ class Shift:
         assert type(duration) == int
         assert isinstance(position_preferences, list)
 
-        # TODO: check location works
         assert location in Locations, f"Shift location is {location}, but must be one of {', '.join([l for l in Locations])}"
 
         # Validate day
@@ -327,6 +332,21 @@ class Shift:
 
         return False
 
+    def overlaps_timeoff(self, timeoff):
+        # TODO: account for the previous night might overlap the next morning
+        start1 = self.start_time
+        end1 = self.start_time + self.duration
+
+        start2 = timeoff.start_time
+        end2 = timeoff.start_time + timeoff.duration
+
+        # TODO: write tests to check that start/end overlaps do not count
+        if start2 <= start1 < end2:
+            return True
+        if start2 < end1 <= end2:
+            return True
+        return False
+
     def __repr__(self):
         attrs = vars(self)
         msg = "Shift "
@@ -348,10 +368,31 @@ def compare_shifts(shift1, shift2):
         return 0
 
 
+def higher_preference(preferences, doctor1, doctor2):
+    # TODO: return True if doctor1 has higher preference than doctor2
+    pass
+
+
+global_shift = None
 def compare_doctors(doctor1, doctor2):
-    # TODO: somehow pass in shift into comparator
+    # Order
+    # TODO: still unsure how to make sure the end result will be balanced,
+    #   perhaps do the best upto expected weekends/nights lower bounds, and
+    #   then round robin? Or do swaps at the end?
+    #   FRED -- would it be ok to have some people be within 1 of each other?
+    #       otherwise it would be difficult to add 3-5 nights or 2 weekends
+
     # Sort by hours needed, nights needed, weekends needed, shift preference
     # Move to back of list if requested this time off
+    position_preferences = global_shift.position_preferences
+
+    # TODO: doctors who are mid weekend/night shift are sorted higher
+    if doctor1.string_nights < doctor2.string_nights:
+        return -1
+    elif doctor1.string_nights > doctor2.string_nights:
+        return 1
+
+
     return 0
 
 
@@ -367,7 +408,11 @@ class Schedule:
             print('Schedule Complete!!!')
             return curr_schedule
 
+        # Set shift to be used by sorting comparator
         shift = shifts[i]
+        global global_shift
+        global_shift = shift
+
         self.try_resetting_weekly_hours(doctors, shifts, i)
         available_doctors = self.filter_available_doctors(doctors, shift)
         sorted_doctors = self.sort_doctors(available_doctors, shift)
@@ -390,9 +435,27 @@ class Schedule:
             return None
 
     def filter_available_doctors(self, doctors, shift):
-        # TODO: Filter doctors
-        # Mandatory Time Off, Not Working, Do Not Have Seniority, Shift Would Exceed 60 Hours
         available = []
+        for doctor in doctors:
+            # Mandatory timeoff
+            for timeoff in doctor.mandatory_timeoff:
+                if shift.overlaps_timeoff(timeoff):
+                    break
+
+            # Not working on day
+            if not doctor.working_on_day(shift.start_day): # TODO: you might need to check they are not working the next day if duration goes over
+                continue
+
+            # Does not have seniority
+            if doctor.seniority not in shift.position_preferences:
+                continue
+
+            # Shift would exceed 60 hours
+            if doctor.weekly_hours[-1] + shift.duration > 60:
+                continue
+
+            available.append(doctor)
+
         return available
 
     def sort_doctors(self, doctors, shift):
@@ -402,8 +465,8 @@ class Schedule:
         if len(doctors) == 0:
             return None
 
-        # TODO: potentially randomize instead of selecting the first doctor
-        return doctors[0]
+        # TODO: potentially randomize instead of selecting the best doctor
+        return doctors[-1]
 
     def create_extra_shifts(self, shifts, doctors):
         """
@@ -414,9 +477,7 @@ class Schedule:
         pass
 
     def undo_try_resetting_weekly_hours(self, doctors, shifts, i):
-        # TODO: whatever the hours were before they were reset to zero
-        # needs to be returned, i think this might require saving the
-        # weekly hours in a stack
+        # When backtracking, determine if you need to remove this weeks hours
         assert i > 0, f"Undoing weekly reset hours for shift 0, but should be impossible"
 
         # Determine if you are crossing threshold back to last week
@@ -435,8 +496,6 @@ class Schedule:
 
 
     def try_resetting_weekly_hours(self, doctors, shifts, i):
-        # TODO: you can't undo reset hours if you backtrack the previous week
-
         # No need to reset if its the first # TODO: check this is accurate
         if i < 1:
             return
