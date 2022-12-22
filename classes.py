@@ -1,6 +1,9 @@
 from functools import cmp_to_key
 from settings.block import START_DAY, END_DAY
-from settings.config import Seniority, ExpectedHours, Locations, ExpectedNights, ExpectedWeekends
+from settings.config import (
+    Seniority, ExpectedHours, Locations, ExpectedNights, ExpectedWeekends,
+    MAX_CONSECUTIVE_NIGHT_SHIFTS, MAX_CONSECUTIVE_WEEKEND_SHIFTS
+)
 
 
 class Block:
@@ -81,6 +84,10 @@ class Doctor:
         self.actual_nights = 0 # TODO: determine if there are carry nights
         self.actual_weekends = 0 # TODO: determine if there are carry weekends
         self.actual_shifts = 0
+        self.consecutive_weekend_shifts = 0
+        self.consecutive_night_shifts = 0
+        self.location_hours = {location: 0 for location in Locations}
+        self.shifts = []
 
         # Add Wednesday conference for EM residents
         if not Seniority(seniority) == Seniority.OFF_SERVICE:
@@ -151,7 +158,8 @@ class Doctor:
         timeoff = TimeOff(self.name, start_day, start_time, duration, mandatory=True)
         self.mandatory_timeoff.append(timeoff)
 
-    def remove_mandatory_time_off(self):
+    def remove_mandatory_timeoff(self):
+        assert len(self.mandatory_timeoff) > 0, f"Mandatory timeoff cannot be removed from {self.name}, None exist"
         self.mandatory_timeoff.pop()
 
     def worked_weekly_max_hours(self):
@@ -162,6 +170,7 @@ class Doctor:
         return bool(60 <= self.weekly_hours[-1])
 
     def received_weekly_break(self):
+        # TODO: write this if it is a problem that people aren't getting breaks
         """
         This should return True if they had a 24 hour break from the previous
         Sunday to next Sunday.
@@ -179,34 +188,113 @@ class Doctor:
         """
         Remove this current weeks weekly hours when backtracking.
         """
+        assert len(self.weekly_hours) > 0, f"Weekly hours cannot be removed from {self.name}, None exist"
         self.weekly_hours.pop()
+
+    def calculate_consecutive_nights(self):
+        """
+        When backtracking, consecutive nights need to be recalculated using the
+        doctors shifts. This is because removing a day that occurs after a
+        string of nights tells you consecutive nights can be reset to zero. But
+        removing a night that occurs after a string of days does not tell you
+        how many nights occur before this.
+
+        """
+        consecutive_nights = 0
+        for shift in reversed(self.shifts):
+            if shift.night:
+                consecutive_nights += 1
+            else:
+                break
+        return consecutive_nights
+
+    def calculate_consecutive_weekends(self):
+        consecutive_weekend_shifts = 0
+        for shift in reversed(self.shifts):
+            if shift.weekend:
+                consecutive_weekend_shifts += 1
+            else:
+                break
+        return consecutive_weekend_shifts
 
     def add_shift(self, shift):
         # Add actual hours worked, nights, and weekend count by this shift
         # Then add mandatory time off after the shift
+        # And hours by location
+        # Save shift for doctor
         self.actual_shifts += 1
         self.actual_hours += shift.duration
         self.weekly_hours[-1] += shift.duration
+        self.location_hours[shift.location] += shift.duration
         if shift.night:
             self.actual_nights += 1
+            self.consecutive_night_shifts += 1
+        else:
+            self.consecutive_night_shifts = 0
+
         if shift.weekend:
             self.actual_weekends += 1
+            self.consecutive_weekend_shifts += 1
+        else:
+            self.consecutive_weekend_shifts = 0
 
         start_day = shift.start_day + (shift.start_time + shift.duration) // 24
         start_time = shift.start_time + (shift.start_time + shift.duration) % 24
         self.add_mandatory_time_off(start_day, start_time, shift.duration)
+        self.shifts.append(shift)
 
-    def remove_shift(self, shift):
+    def remove_shift(self):
+        assert len(self.shifts) > 0, f"Shift cannot be removed from {self.name}, None exist"
+
+        # TODO: test that popping a day that had a string of nights before sets consecutive nights properly
+        shift = self.shifts.pop()
         self.actual_shifts -= 1
         self.actual_hours -= shift.duration
         self.weekly_hours[-1] -= shift.duration
+        self.location_hours[shift.location] -= shift.duration
+
+        # Note: You could calculate consecutive nights/weekends every time
+        # a shift is added or removed but this would be slower than incrementing
+        # and decrementing and only recalculating when you absolutely need to.
         if shift.night:
-            self.actual_shifts -= 1
+            self.actual_nights -= 1
+            self.consecutive_night_shifts -= 1
+        else:
+            # Cannot decrement or reset to zero, need to calculate using the shifts
+            self.consecutive_night_shifts = self.calculate_consecutive_nights()
+
         if shift.weekend:
             self.actual_weekends -= 1
+            self.consecutive_weekend_shifts -= 1
+        else:
+            # Cannot decrement or reset to zero, need to calculate using the shifts
+            self.consecutive_weekend_shifts = self.calculate_consecutive_weekends()
+
+        assert len(self.mandatory_timeoff) > 0, f"Mandatory timeoff cannot be removed from {self.name}, None exist"
         self.mandatory_timeoff.pop() # TODO: check popping last does not have a corner case
+        # TODO: remove consecutive nights and weekends
+
+    def can_work_more_night_shifts(self):
+        if self.consecutive_night_shifts == MAX_CONSECUTIVE_NIGHT_SHIFTS:
+            return False
+        # Already reached upper boundary of nights
+        if self.actual_nights == self.expected_night_range[1]:
+            return False
+
+        return True
+
+    def can_work_more_weekend_shifts(self):
+        if self.consecutive_weekend_shifts == MAX_CONSECUTIVE_WEEKEND_SHIFTS:
+            return False
+        # Already reached upper boundary of weekends
+        if self.actual_weekends == self.expected_weekend_range[1]:
+            return False
+
+        return True
 
     def stats(self):
+        # TODO: remove this, don't think it is useful since all member attributes
+        #   of doctor can be printed out with representation
         """
         Recalculate carried hours after schedule is complete
         """
@@ -310,7 +398,7 @@ class Shift:
     def unassign_doctor(self, doctor):
         self.doctor = None
         doctor.remove_shift(self)
-        doctor.remove_mandatory_time_off()
+        doctor.remove_mandatory_timeoff()
         print(f'Unassigning Shift:{self} to Doctor:{doctor}')
 
     def determine_if_night(self, start_time):
@@ -368,23 +456,48 @@ def compare_shifts(shift1, shift2):
         return 0
 
 
-def higher_preference(preferences, doctor1, doctor2):
-    # TODO: return True if doctor1 has higher preference than doctor2
-    pass
-
-
 global_shift = None
 def compare_doctors(doctor1, doctor2):
-    # Order
-    # TODO: still unsure how to make sure the end result will be balanced,
-    #   perhaps do the best upto expected weekends/nights lower bounds, and
-    #   then round robin? Or do swaps at the end?
-    #   FRED -- would it be ok to have some people be within 1 of each other?
-    #       otherwise it would be difficult to add 3-5 nights or 2 weekends
+    # Order: Front-Back is Last-First so the doctor at the back of the list
+    # should be chosen first
 
-    # Sort by hours needed, nights needed, weekends needed, shift preference
-    # Move to back of list if requested this time off
-    position_preferences = global_shift.position_preferences
+    # 1. Requested Timeoff
+    # 2. String nights
+    # 3. String weekends
+    # 4. Amount of weekends
+    # 5. Amount of nights
+    # 6. Shift preference
+    # 7. Hours needed
+    # 8. Location hours
+
+    # Requested Timeoff
+    wants_timeoff1 = False
+    wants_timeoff2 = False
+    for timeoff1 in doctor1.requested_timeoff:
+        if global_shift.overlaps_timeoff(timeoff1):
+            wants_timeoff1 = True
+    for timeoff2 in doctor2.requested_timeoff:
+        if global_shift.overlaps_timeoff(timeoff2):
+            wants_timeoff2 = True
+    if wants_timeoff1 and not wants_timeoff2:
+        return -1
+    elif not wants_timeoff1 and wants_timeoff2:
+        return 1
+
+    # String nights
+    # Doctors who are mid-strung are prioritized (back of list is popped first)
+    # After 2 weekend shifts, doctors no longer work weekends
+    if doctor1.consecutive_night_shifts < doctor2.consecutive_night_shifts:
+        return -1
+    elif doctor1.consecutive_night_shifts > doctor2.consecutive_night_shifts:
+        return 1
+
+    # String weekends
+    # After 5 night shifts
+    if doctor1.consecutive_weekend_shifts < doctor2.consecutive_weekend_shifts:
+        return -1
+    elif doctor1.consecutive_weekend_shifts > doctor2.consecutive_weekend_shifts:
+        return 1
 
     # TODO: doctors who are mid weekend/night shift are sorted higher
     if doctor1.string_nights < doctor2.string_nights:
@@ -392,7 +505,58 @@ def compare_doctors(doctor1, doctor2):
     elif doctor1.string_nights > doctor2.string_nights:
         return 1
 
+    # Amount of weekends, upper bound
+    weekends_needed1 = doctor1.expected_weekend_range[1] - doctor1.actual_weekends
+    weekends_needed2 = doctor2.expected_weekend_range[1] - doctor2.actual_weekends
+    if weekends_needed1 < weekends_needed2:
+        return -1
+    elif weekends_needed1 > weekends_needed2:
+        return 1
 
+    # Amount of nights, upper bound
+    nights_needed1 = doctor1.expected_night_range[1] - doctor1.actual_nights
+    nights_needed2 = doctor2.expected_night_range[1] - doctor2.actual_nights
+    if nights_needed1 < nights_needed2:
+        return -1
+    elif nights_needed1 > nights_needed2:
+        return 1
+
+    # Preference for seniority
+    position_preferences = global_shift.position_preferences
+    seniority_index1 = -1
+    for i, seniority in position_preferences:
+        # TODO: test that this compares properly
+        if seniority == doctor1.seniority:
+            seniority_index1 = i
+    seniority_index2 = -1
+    for j, seniority, in position_preferences:
+        if seniority == doctor2.seniority:
+            seniority_index2 = j
+    assert seniority_index1 != -1, f"Preferences for shift are {position_preferences}, but doctor1 seniority is {doctor1.seniority}"
+    assert seniority_index2 != -1, f"Preferences for shift are {position_preferences}, but doctor2 seniority is {doctor2.seniority}"
+    # Smaller index represents higher priority
+    if seniority_index1 > seniority_index2:
+        return -1
+    elif seniority_index1 < seniority_index2:
+        return 1
+
+    # Hours needed
+    hours_needed1 = doctor1.expected_hours - doctor1.actual_hours
+    hours_needed2 = doctor2.expected_hours - doctor2.actual_hours
+    if hours_needed1 < hours_needed2:
+        return -1
+    elif hours_needed1 > hours_needed2:
+        return 1
+
+    # Location hours, less location hours should be prioritized
+    location_hours1 = doctor1.location_hours[global_shift.location]
+    location_hours2 = doctor2.location_hours[global_shift.location]
+    if location_hours1 > location_hours2:
+        return -1
+    elif location_hours1 < location_hours2:
+        return 1
+
+    # Doctors tied
     return 0
 
 
@@ -450,15 +614,31 @@ class Schedule:
             if doctor.seniority not in shift.position_preferences:
                 continue
 
+            # Shift would exceed expected nights
+            if doctor.actual_nights == doctor.expected_night_range[1]:
+                continue
+
+            # Shift would exceed number of weekends
+            if doctor.actual_weekends == doctor.expected_weekend_range[1]:
+                continue
+
             # Shift would exceed 60 hours
             if doctor.weekly_hours[-1] + shift.duration > 60:
+                continue
+
+            # Doctor hit the max weekend string
+            if not doctor.can_work_more_weekend_shifts():
+                continue
+
+            # Doctor hit the max night string
+            if not doctor.can_work_more_night_shifts():
                 continue
 
             available.append(doctor)
 
         return available
 
-    def sort_doctors(self, doctors, shift):
+    def sort_doctors(self, doctors):
         return sorted(doctors, key=cmp_to_key(compare_doctors))
 
     def choose_doctor(self, doctors):

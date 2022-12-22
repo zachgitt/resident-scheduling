@@ -1,6 +1,10 @@
 from enum import Enum
 
 
+MAX_CONSECUTIVE_WEEKEND_SHIFTS = 2
+MAX_CONSECUTIVE_NIGHT_SHIFTS = 5
+
+
 class Seniority(Enum):
     # Off service are non-emergency residents that are on rotation
     OFF_SERVICE = 0
