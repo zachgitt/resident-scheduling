@@ -1,3 +1,48 @@
 Name,Seniority,Chief,Carried Hours,Requested Day:Time:Duration,Mandatory Day:Time:Duration,Half Block,Pre Block Hours
-Fred Milgrim,4,Yes,0,2:7:72 5:16:12,None,Both,0
-Zach Gittelman,0,No,5,13:15:48,None,1,0
+Ben Hong,4,Yes,-12,_,2:23:40 16:19:24 9:7:8 9:23:24 23:23:24,Both,0
+Matt Straight,4,No,-8,_,16:19:12,Both,12
+Erena Weathers,4,No,-3,26:15:64 23:19:8,16:19:12,Both,0
+Tim Friedmann,4,No,-13,_,1:7:12 3:23:16,1,12
+Joe-Ann Moser,4,Yes,-16,_,2:23:40 9:23:24,1,0
+Sarah Ring,4,No,-5,1:07:48,_,1,12
+Joel Rowe,4,No,-4,_,_,1,0
+Ranjita Raghavan,4,No,-6,26:15:48,16:19:12,2,0
+Chris Counts,4,No,-8,_,16:19:12,2,12
+Kate Votta,4,No,4,22:15:8 26:19:48,16:19:12,2,10
+Paul Johnston,4,No,-2,_,_,2,0
+Hashem Zikry,4,Yes,-4,20:15:72,16:19:24 23:23:24,2,0
+,,,,,,,
+Isley Arruda,3,No,-12.5,_,9:7:8 23:19:12,Both,0
+Ben Asriel,3,No,-8,_,23:19:12,Both,12
+Mariam Bhatti,3,No,0,5:7:72,1:7:12 23:19:12,Both,12
+Nikhil Gupte,3,No,20,_,1:7:12 23:19:12,Both,12
+Morgan Potter,3,No,-4,_,23:19:12,Both,0
+Diandra Wong,3,No,0,1:7:12 6:7:48,23:19:12,Both,0
+,,,,,,,
+Kassel Galaty,2,No,-16,_,9:7:8,Both,0
+Cassandra Macalino,2,No,0,_,1:7:12,1,12
+Jake Ziff,2,No,0,_,_,1,0
+Malisha Shah,2,No,8,_,_,2,12
+Sam Wurzelman,2,No,8,27:7:48,_,2,0
+,,,,,,,
+Carina Abreu,1,No,-4,_,9:7:8 28:19:12,Both,0
+Jamie Garden,1,No,4,_,28:19:12,Both,0
+Emilia Ling,1,No,0,_,_,1,0
+Erin Solis,1,No,-8,_,_,1,0
+Grace Mosley,1,No,0,_,_,2,0
+Nick Nasser,1,No,0,_,_,2,0
+,,,,,,,
+Morgan Berman,0,No,-8,_,_,Both,0
+Jun Yeop Lee,0,No,-8,_,_,Both,0
+,,,,_,_,,
+Sydnee Rausch,0,No,0,_,28:19:12,Both,0
+,,,,,,,
+Joe Li,0,No,-18,_,1:23:56 8:23:56,1,0
+Jessica Quinn,0,No,-4,5:19:48,1:7:12 2:23:32 9:23:32,1,12
+,,,,,,,
+Elizabeth Batista,0,No,0,_,14:19:12,1,12
+Saloni Agrawal,0,No,0,13:7:48,14:7:24 1:7:12,1,12
+Rebecca Fisher,0,No,0,_,14:7:24,1,12
+Thomas Barbaccia,0,No,0,_,28:7:24,2,12
+Marissa Contento,0,No,0,_,28:7:24,2,12
+Anya Srikureja,0,No,0,_,_,2,12

@@ -1,6 +1,163 @@
-Location,Day,Time,Duration,Position Preferences
-Acute 2,6,14,8,3>2>1
-Acute 2,5,13,9,0>1
-Resus,6,13,10,0
-
-
+Location,Day,Time,Duration,Position Preferences,Optional
+Acute 1,1,10,9,0>1>2>3,False
+Acute 1,1,19,12,0>1>2>3>4,False
+Acute 2,1,7,9,1>2,False
+Acute 2,1,7,9,0>1>2,False
+Acute 2,1,15,9,1>2,False
+Acute 2,1,15,9,0>1>2,False
+Acute 2,1,23,9,1>2,False
+Acute 2,1,23,9,0>1>2,False
+Acute 2,1,11,9,2>3,False
+Mid-Fast,1,7,12,0>1,False
+Mid-Fast,1,15,8,2>3>4,False
+Mid-Fast,1,23,8,3>4,False
+Mid-Fast,1,23,8,0>1,True
+Resus,1,7,9,3>2,False
+Resus Senior,1,14,8,4,False
+Resus,1,15,9,2>3,False
+Resus,1,23,8,3>2,False
+Senior,1,7,8,4,False
+Senior,1,15,8,4,False
+Senior,1,23,8,4,False
+Pediatrics,1,16,8,4>3,False
+,,,,,
+Acute 1,2,10,9,0>1>2>3,False
+Acute 1,2,19,12,0>1>2>3>4,False
+Acute 1,2,19,12,0>1>2>3>4,False
+Acute 2,2,7,9,1>2,False
+Acute 2,2,7,9,0>1>2,False
+Acute 2,2,15,9,1>2,False
+Acute 2,2,15,9,0>1>2,False
+Acute 2,2,23,9,1>2,False
+Acute 2,2,11,9,2>3,False
+Senior,2,7,8,4,False
+Senior,2,15,8,4,False
+Mid-Fast,2,7,12,0>1,False
+Mid-Fast,2,15,8,2>3>4,False
+Mid-Fast,2,19,12,0>1,False
+Mid-Fast,2,23,8,3>4,True
+Mid-Fast,2,23,8,3>4,False
+Resus Senior,2,14,8,4,False
+Resus,2,7,9,3>2,False
+Resus,2,15,8,2>3,False
+,,,,,
+Acute 1,3,19,12,0>1>2>3>4,False
+Acute 1,3,19,12,0>1>2>3>4,False
+Acute 1,3,15,8,1>2>3>4,True
+Senior,3,15,8,4,False
+Senior,3,23,8,4,False
+Acute 2,3,15,9,1>2>3,False
+Acute 2,3,15,9,0>1>2,False
+Acute 2,3,23,9,1>2,False
+Acute 2,3,23,9,0>1>2,False
+Mid-Fast,3,7,12,0>1,False
+Mid-Fast,3,15,8,0>1>2>3>4,False
+Mid-Fast,3,23,8,3>4,False
+Mid-Fast,3,23,8,0>1,True
+Resus Senior,3,16,8,4,False
+Resus,3,16,8,2>3,False
+Resus,3,23,8,3>2,False
+Pediatrics,3,23,8,4>3,False
+,,,,,
+Acute 1,4,10,9,0>1>2>3,False
+Acute 1,4,19,12,0>1>2>3>4,False
+Acute 1,4,19,12,0>1>2>3>4,False
+Acute 1,4,19,12,1>2>3>4,False
+Acute 2,4,7,9,1>2,False
+Acute 2,4,7,9,0>1>2,False
+Acute 2,4,15,9,1>2,False
+Acute 2,4,15,9,0>1>2,False
+Acute 2,4,23,9,1>2,False
+Acute 2,4,23,9,0>1>2,False
+Acute 2,4,11,9,2>3,False
+Senior,4,7,8,4,False
+Senior,4,15,8,4,False
+Senior,4,23,8,4,False
+Mid-Fast,4,15,8,2>3>4,False
+Mid-Fast,4,23,8,3>4,False
+Mid-Fast,4,19,12,0>1,True
+Resus,4,7,9,3>2,False
+Resus Senior,4,14,8,4,False
+Resus,4,15,9,2>3,False
+Resus,4,23,8,3>2,False
+Pediatrics,4,23,8,4>3,False
+,,,,,
+Acute 1,5,10,9,0>1>2>3,False
+Acute 1,5,19,12,0>1>2>3>4,False
+Acute 1,5,19,12,1>2>3>4,False
+Senior,5,7,8,4,False
+Senior,5,15,8,4,False
+Senior,5,23,8,4,False
+Acute 2,5,7,12,1>2,False
+Acute 2,5,7,12,0>1>2,False
+Acute 2,5,11,9,2>3,False
+Acute 2,5,19,12,1>2,False
+Acute 2,5,19,12,0>1>2,False
+Mid-Fast,5,19,12,0>1,False
+Mid-Fast,5,10,9,2>3>4>1>0,False
+Mid-Fast,5,19,12,3>4,False
+Resus,5,7,9,3>2,False
+Resus Senior,5,14,8,4,True
+Resus,5,15,9,2>3,False
+Resus,5,23,8,3>2,False
+Pediatrics,5,7,8,4>3,False
+,,,,,
+Acute 1,6,7,12,0>1>2>3,False
+Acute 1,6,19,12,0>1>2>3>4,False
+Acute 1,6,19,12,1>2>3>4,False
+Acute 2,6,7,12,1>2,False
+Acute 2,6,7,12,0>1>2,False
+Acute 2,6,11,9,2>3,True
+Acute 2,6,19,12,1>2,False
+Acute 2,6,19,12,0>1>2,False
+Senior,6,7,12,4,False
+Senior,6,19,12,4,False
+Mid-Fast,6,7,12,0>1>2>3>4,False
+Mid-Fast,6,19,12,0>1,False
+Mid-Fast,6,19,12,3>4,False
+Resus,6,7,9,2>3>4,False
+Resus,6,15,9,3>2>4,False
+Resus,6,23,8,2>3>4,False
+,,,,,
+Acute 1,7,19,12,0>1>2>3>4,False
+Acute 1,7,19,12,1>2>3>4,False
+Acute 2,7,7,12,1>2,False
+Acute 2,7,7,12,0>1>2,False
+Acute 2,7,11,9,2>3,False
+Acute 2,7,19,12,1>2,False
+Acute 2,7,19,12,0>1>2,False
+Senior,7,7,12,4,False
+Senior,7,19,12,4,False
+Mid-Fast,7,19,12,0>1,False
+Mid-Fast,7,23,8,3>4,False
+Resus,7,7,9,2>3>4,False
+Resus,7,15,9,3>2>4,False
+Resus,7,23,8,2>3>4,False
+Pediatrics,7,7,10,4>3,False
+,,,,,
+Acute 1,14,19,12,0>1>2>3>4,False
+Acute 2,14,7,12,1>2,False
+Acute 2,14,7,12,0>1>2,False
+Acute 2,14,11,9,2>3,False
+Acute 2,14,19,12,1>2,False
+Acute 2,14,19,12,0>1>2,False
+Senior,14,7,12,4,False
+Senior,14,19,12,4,False
+Mid-Fast,14,7,12,0>1,False
+Mid-Fast,14,7,12,2>3>4>1,False
+Mid-Fast,14,23,8,3>4,False
+Resus,14,7,9,2>3>4,False
+Resus,14,15,9,3>2>4,False
+Resus,14,23,8,2>3>4,False
+,,,,,
+Pediatrics,10,16,8,4>3,False
+Pediatrics,12,7,8,4>3,False
+Pediatrics,13,7,10,4>3,False
+Pediatrics,15,16,8,4>3,False
+Pediatrics,17,23,8,4>3,False
+Pediatrics,18,23,8,4>3,False
+Pediatrics,19,7,8,4>3,False
+Pediatrics,21,7,10,4>3,False
+Pediatrics,24,16,8,4>3,False
+Pediatrics,25,7,8,4>3,False
+Pediatrics,26,7,8,4>3,False

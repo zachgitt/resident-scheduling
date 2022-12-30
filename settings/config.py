@@ -53,5 +53,11 @@ ExpectedWeekends = {
 Locations = {
     'Acute 1',
     'Acute 2',
-    'Resus'
+    'Mid-Fast',
+    'PIT',
+    'Resus',
+    'Resus Senior',
+    'Resus Shadow',
+    'Senior',
+    'Pediatrics'
 }
